@@ -1,2 +1,112 @@
-# Homework-tracker
-I want to create this repo  to keep track of my homework
+# Homework Tracker
+
+A minimal-effort homework tracker: type homework in as one line, set up
+repeating assignments once, and get reminded **24 hours**, **8 hours**, and
+**1 hour** before each thing is due — by push notification and/or email.
+
+## How it works
+
+- **Quick add** — type a single line like `Math: worksheet ch 4 due fri 5pm`
+  or `Chemistry lab report tomorrow`. The subject (text before a `:`), title,
+  and due date/time are parsed automatically. No date mentioned? It's not
+  added until you give it one. No time mentioned? It defaults to 11:59pm.
+- **Repeating homework** — set a title, subject, which weekdays it's due on,
+  and a due time once (e.g. "Vocab quiz, every Mon/Wed/Fri, due 3:30pm").
+  The app keeps ~90 days of upcoming occurrences generated at all times, and
+  tops itself up automatically.
+- **Reminders** — a background check runs every 15 minutes, looks for
+  incomplete tasks crossing the 24h/8h/1h-before mark, and sends a push
+  notification and/or email once per task per window (never twice).
+  Completing a task stops its reminders immediately.
+
+## Stack
+
+Next.js (App Router, TypeScript) + SQLite via [libSQL](https://turso.tech)
+(works as a local file in dev, and as a hosted [Turso](https://turso.tech)
+database in production so data survives serverless restarts) + Tailwind CSS.
+No accounts/login — this is built for a single user.
+
+## 1. Local development
+
+```bash
+npm install
+npm run generate-vapid   # prints VAPID_* keys, needed for push notifications
+cp .env.example .env.local
+# paste the generated VAPID keys into .env.local
+npm run dev
+```
+
+Open http://localhost:3000. The SQLite file is created automatically at
+`./data/local.db` the first time you hit the app.
+
+To test reminders locally without waiting for a real due date, hit the cron
+endpoint directly:
+
+```bash
+curl http://localhost:3000/api/cron/check-reminders
+```
+
+(In development, `CRON_SECRET` isn't required. Add a task due in the next
+25 hours first so there's something to check.)
+
+## 2. Set up email (optional but recommended)
+
+1. Create a free account at [resend.com](https://resend.com) and grab an API key.
+2. Set `RESEND_API_KEY`, `REMINDER_EMAIL_TO` (your email), and `RESEND_FROM`
+   in your env. Until you verify your own sending domain in Resend, you can
+   only send to the email address on your Resend account — that's fine for
+   a personal reminder tool.
+
+## 3. Set up push notifications
+
+Already generated your VAPID keys above with `npm run generate-vapid`. Once
+they're in your env (locally and later in Vercel), open the app and click
+**"Enable push reminders"**. For notifications to arrive when the app/tab is
+closed, install it as a PWA (browser menu → "Install app" / "Add to Home
+Screen") — this keeps the service worker alive in the background on most
+platforms.
+
+## 4. Deploy to Vercel
+
+1. Push this repo to GitHub (already done if you're reading this from your repo).
+2. Create a [Turso](https://turso.tech) database for production data (free tier):
+   ```bash
+   turso db create homework-tracker
+   turso db show homework-tracker --url        # -> DATABASE_URL
+   turso db tokens create homework-tracker      # -> DATABASE_AUTH_TOKEN
+   ```
+3. Import the repo into [Vercel](https://vercel.com/new).
+4. In the Vercel project's **Settings → Environment Variables**, add everything
+   from `.env.example`: `DATABASE_URL`, `DATABASE_AUTH_TOKEN`, `VAPID_PUBLIC_KEY`,
+   `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`,
+   `RESEND_API_KEY`, `RESEND_FROM`, `REMINDER_EMAIL_TO`, and a random
+   `CRON_SECRET` (e.g. `openssl rand -hex 32`).
+5. Deploy.
+
+## 5. Turn on the reminder scheduler
+
+Vercel's free (Hobby) plan only runs its own Cron Jobs once a day, which
+isn't nearly precise enough for 1-hour-before reminders. Instead, this repo
+ships a **GitHub Actions workflow** (`.github/workflows/reminder-cron.yml`)
+that pings your deployed reminder-check endpoint every 15 minutes, for free,
+regardless of Vercel plan.
+
+In your GitHub repo, go to **Settings → Secrets and variables → Actions**
+and add two repository secrets:
+
+- `APP_URL` — your deployed URL, e.g. `https://homework-tracker.vercel.app`
+- `CRON_SECRET` — the same value you set in Vercel's env vars
+
+That's it — the workflow is already enabled and will start firing every 15
+minutes once those secrets exist. You can trigger it manually from the
+Actions tab (`Run workflow`) to test it immediately after deploying.
+
+## Data model notes
+
+- One-off tasks and generated occurrences of repeating homework both live in
+  a single `tasks` table — completing or deleting one never touches the
+  others.
+- Reminders are deduplicated in a `reminder_log` table (one row per
+  task × window), so re-running the check endpoint is always safe.
+- Editing a task's due date clears its reminder log so the 24h/8h/1h windows
+  re-evaluate against the new date.
