@@ -20,7 +20,8 @@ self.addEventListener("push", (event) => {
     body: payload.body || "",
     icon: "/icon.svg",
     badge: "/icon.svg",
-    data: { url: payload.url || "/" },
+    data: { url: payload.url || "/", taskId: payload.taskId || null },
+    actions: payload.taskId ? [{ action: "snooze", title: "Remind me in 1 hour" }] : [],
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
@@ -28,7 +29,20 @@ self.addEventListener("push", (event) => {
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || "/";
+  const data = event.notification.data || {};
+
+  if (event.action === "snooze" && data.taskId) {
+    event.waitUntil(
+      fetch("/api/snooze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId: data.taskId }),
+      }).catch(() => {})
+    );
+    return;
+  }
+
+  const url = data.url || "/";
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       for (const client of clients) {

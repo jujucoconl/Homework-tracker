@@ -17,7 +17,30 @@ repeating assignments once, and get reminded **24 hours**, **8 hours**, and
 - **Reminders** — a background check runs every 15 minutes, looks for
   incomplete tasks crossing the 24h/8h/1h-before mark, and sends a push
   notification and/or email once per task per window (never twice).
-  Completing a task stops its reminders immediately.
+  Completing a task stops its reminders immediately. A push notification
+  has a "Remind me in 1 hour" action button that snoozes it.
+- **Editing** — every task can be edited in place (title, subject, due
+  date/time) via the Edit button on hover (always visible on touch
+  screens).
+- **Undo** — completing a task shows an "Undo" toast for 5 seconds before
+  it's actually saved as done.
+- **Deleting** anything (a task or a repeating template) requires clicking
+  twice — the button turns into "Confirm?" for 3 seconds.
+- **Active / Completed tabs** — completed homework isn't gone, it's one
+  tab over, with its own Undo and Delete.
+- **List / Week views** — the list groups by Overdue/Today/Tomorrow/This
+  week/Later; Week shows a 7-day grid with Prev/Today/Next navigation.
+- **Subject filter chips** and **subject autocomplete** (quick-add
+  suggestion chips + datalists in the edit and repeating-homework forms)
+  keep subject names consistent instead of accumulating typo'd duplicates.
+- **Manage repeating homework** — an always-visible list under the task
+  list lets you pause (stops generating new occurrences, keeps existing
+  ones), resume, or delete a repeating template.
+- **"Send test reminder" button** — fires a real push notification and
+  email right now, and reports exactly what is/isn't configured, so you
+  can confirm setup without waiting for a real due date.
+- **Light/dark theme toggle** — follows your system preference by
+  default; the toggle in the header overrides and remembers your choice.
 
 ## Stack
 

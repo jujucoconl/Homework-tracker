@@ -3,11 +3,17 @@
 import { useMemo, useState } from "react";
 import { parseQuickAdd } from "@/lib/quickAdd";
 
-export default function QuickAdd({ onAdded }: { onAdded: () => void }) {
+export default function QuickAdd({ subjects, onAdded }: { subjects: string[]; onAdded: () => void }) {
   const [text, setText] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const parsed = useMemo(() => (text.trim() ? parseQuickAdd(text) : null), [text]);
+
+  function insertSubject(subject: string) {
+    const colonIdx = text.indexOf(":");
+    const rest = colonIdx > 0 && colonIdx <= 24 ? text.slice(colonIdx + 1).trimStart() : text;
+    setText(`${subject}: ${rest}`);
+  }
 
   async function submit() {
     if (!parsed || !parsed.dueAt || submitting) return;
@@ -38,9 +44,24 @@ export default function QuickAdd({ onAdded }: { onAdded: () => void }) {
           if (e.key === "Enter") submit();
         }}
         placeholder='Type it like a sentence: "Math: worksheet ch 4 due fri 5pm"'
-        className="w-full rounded-lg border border-border bg-panel px-4 py-3 text-base placeholder:text-slate-500 focus:border-accent focus:outline-none"
+        className="w-full rounded-lg border border-border bg-panel px-4 py-3 text-base placeholder:text-muted focus:border-accent focus:outline-none"
       />
-      <div className="mt-1.5 flex items-center justify-between text-xs text-slate-400 min-h-[1.25rem]">
+
+      {subjects.length > 0 && (
+        <div className="mt-1.5 flex flex-wrap gap-1.5">
+          {subjects.map((s) => (
+            <button
+              key={s}
+              onClick={() => insertSubject(s)}
+              className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted hover:border-accent hover:text-accent transition-colors"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-1.5 flex items-center justify-between text-xs text-muted min-h-[1.25rem]">
         {parsed?.dueAt ? (
           <span>
             {parsed.subject ? <span className="text-accent">{parsed.subject}</span> : "General"} ·{" "}

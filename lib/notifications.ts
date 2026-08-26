@@ -8,7 +8,7 @@ const REMINDER_LABEL: Record<ReminderType, string> = {
   "1h": "due in 1 hour",
 };
 
-function vapidConfigured(): boolean {
+export function vapidConfigured(): boolean {
   return Boolean(
     process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY && process.env.VAPID_SUBJECT
   );
@@ -24,7 +24,7 @@ function configureWebPush() {
 
 export async function sendPushToAll(
   subs: PushSubscriptionRow[],
-  payload: { title: string; body: string; url?: string }
+  payload: { title: string; body: string; url?: string; taskId?: string }
 ): Promise<{ endpoint: string; ok: boolean; gone: boolean }[]> {
   if (!vapidConfigured() || subs.length === 0) return [];
   configureWebPush();
@@ -49,7 +49,7 @@ export async function sendPushToAll(
   return results;
 }
 
-function emailConfigured(): boolean {
+export function emailConfigured(): boolean {
   return Boolean(process.env.RESEND_API_KEY && process.env.REMINDER_EMAIL_TO);
 }
 
@@ -77,6 +77,25 @@ export async function sendReminderEmail(
       to,
       subject: `Reminder: "${taskTitle}" ${REMINDER_LABEL[type]}`,
       html: `<p><strong>${escapeHtml(taskTitle)}</strong> (${escapeHtml(subject)}) is ${REMINDER_LABEL[type]}.</p><p>Due: ${dueLocal}</p>`,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function sendTestEmail(): Promise<boolean> {
+  if (!emailConfigured()) return false;
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const from = process.env.RESEND_FROM || "Homework Tracker <onboarding@resend.dev>";
+  const to = process.env.REMINDER_EMAIL_TO as string;
+
+  try {
+    await resend.emails.send({
+      from,
+      to,
+      subject: "Test reminder from Homework Tracker",
+      html: "<p>This is a test. If you got this, email reminders are wired up correctly.</p>",
     });
     return true;
   } catch {

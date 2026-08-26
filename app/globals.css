@@ -2,11 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
-html {
+:root {
+  color-scheme: light;
+  --bg: #f5f7fa;
+  --panel: #ffffff;
+  --border: #dde3ea;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --accent-rgb: 37 99 235;
+  --danger: #dc2626;
+}
+
+:root.dark {
   color-scheme: dark;
+  --bg: #0b0f14;
+  --panel: #131a22;
+  --border: #233240;
+  --ink: #e6edf3;
+  --muted: #8a97a6;
+  --accent-rgb: 79 157 255;
+  --danger: #ff6161;
 }
 
 body {
-  background: #0b0f14;
-  color: #e6edf3;
+  background: var(--bg);
+  color: var(--ink);
 }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { WEEKDAY_LABELS } from "@/lib/recurrence";
 
-export default function RecurringForm({ onAdded }: { onAdded: () => void }) {
+export default function RecurringForm({ subjects, onAdded }: { subjects: string[]; onAdded: () => void }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [subject, setSubject] = useState("");
@@ -47,10 +47,7 @@ export default function RecurringForm({ onAdded }: { onAdded: () => void }) {
 
   if (!open) {
     return (
-      <button
-        onClick={() => setOpen(true)}
-        className="text-sm text-slate-400 hover:text-accent transition-colors"
-      >
+      <button onClick={() => setOpen(true)} className="text-sm text-muted hover:text-accent transition-colors">
         + Add repeating homework
       </button>
     );
@@ -60,7 +57,7 @@ export default function RecurringForm({ onAdded }: { onAdded: () => void }) {
     <div className="rounded-lg border border-border bg-panel p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">New repeating homework</h3>
-        <button onClick={() => setOpen(false)} className="text-xs text-slate-500 hover:text-slate-300">
+        <button onClick={() => setOpen(false)} className="text-xs text-muted hover:text-ink">
           Cancel
         </button>
       </div>
@@ -70,14 +67,20 @@ export default function RecurringForm({ onAdded }: { onAdded: () => void }) {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Title, e.g. Vocab quiz"
-          className="rounded-md border border-border bg-bg px-3 py-2 text-sm placeholder:text-slate-500 focus:border-accent focus:outline-none"
+          className="rounded-md border border-border bg-bg px-3 py-2 text-sm placeholder:text-muted focus:border-accent focus:outline-none"
         />
         <input
           value={subject}
           onChange={(e) => setSubject(e.target.value)}
           placeholder="Subject, e.g. Spanish"
-          className="rounded-md border border-border bg-bg px-3 py-2 text-sm placeholder:text-slate-500 focus:border-accent focus:outline-none"
+          list="recurring-subject-options"
+          className="rounded-md border border-border bg-bg px-3 py-2 text-sm placeholder:text-muted focus:border-accent focus:outline-none"
         />
+        <datalist id="recurring-subject-options">
+          {subjects.map((s) => (
+            <option key={s} value={s} />
+          ))}
+        </datalist>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
@@ -88,7 +91,7 @@ export default function RecurringForm({ onAdded }: { onAdded: () => void }) {
             className={`rounded-md border px-2.5 py-1 text-xs transition-colors ${
               weekdays.includes(d.value)
                 ? "border-accent bg-accent/20 text-accent"
-                : "border-border text-slate-400 hover:border-slate-500"
+                : "border-border text-muted hover:border-accent"
             }`}
           >
             {d.short}
@@ -97,7 +100,7 @@ export default function RecurringForm({ onAdded }: { onAdded: () => void }) {
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <label className="text-xs text-slate-400 flex flex-col gap-1">
+        <label className="text-xs text-muted flex flex-col gap-1">
           Due time
           <input
             type="time"
@@ -106,7 +109,7 @@ export default function RecurringForm({ onAdded }: { onAdded: () => void }) {
             className="rounded-md border border-border bg-bg px-3 py-2 text-sm focus:border-accent focus:outline-none"
           />
         </label>
-        <label className="text-xs text-slate-400 flex flex-col gap-1">
+        <label className="text-xs text-muted flex flex-col gap-1">
           Ends (optional)
           <input
             type="date"

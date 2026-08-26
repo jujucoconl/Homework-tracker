@@ -14,7 +14,7 @@ function addDays(dateStr: string, days: number): string {
 
 export async function GET() {
   const db = await getDb();
-  const result = await db.execute("SELECT * FROM recurring_templates WHERE active = 1 ORDER BY created_at DESC");
+  const result = await db.execute("SELECT * FROM recurring_templates ORDER BY active DESC, created_at DESC");
   return NextResponse.json({ templates: result.rows as unknown as RecurringTemplate[] });
 }
 

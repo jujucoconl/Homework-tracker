@@ -33,3 +33,11 @@ export interface PushSubscriptionRow {
   auth: string;
   created_at: string;
 }
+
+export interface SnoozeRow {
+  id: string;
+  task_id: string;
+  fire_at: string;
+  sent: number;
+  created_at: string;
+}

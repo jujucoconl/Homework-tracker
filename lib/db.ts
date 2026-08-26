@@ -65,6 +65,15 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   auth TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS snoozes (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL,
+  fire_at TEXT NOT NULL,
+  sent INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_snoozes_fire_at ON snoozes(fire_at);
 `;
 
 async function init(): Promise<void> {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { sendPushToAll, sendReminderEmail } from "@/lib/notifications";
 import { generateOccurrences, GENERATION_WINDOW_DAYS, TOPUP_THRESHOLD_DAYS } from "@/lib/recurrence";
-import type { PushSubscriptionRow, RecurringTemplate, ReminderType, Task } from "@/lib/types";
+import type { PushSubscriptionRow, RecurringTemplate, ReminderType, SnoozeRow, Task } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +107,7 @@ async function sendDueReminders() {
         title: `${task.title} — ${label}`,
         body: `${task.subject} · due ${dueAt.toLocaleString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })}`,
         url: "/",
+        taskId: task.id,
       });
 
       for (const r of pushResults) {
@@ -128,6 +129,50 @@ async function sendDueReminders() {
   return { checked: tasks.length, sent: sentCount };
 }
 
+async function sendDueSnoozes() {
+  const db = await getDb();
+  const now = new Date().toISOString();
+
+  const due = await db.execute({
+    sql: "SELECT * FROM snoozes WHERE sent = 0 AND fire_at <= ?",
+    args: [now],
+  });
+  const snoozes = due.rows as unknown as SnoozeRow[];
+  if (snoozes.length === 0) return 0;
+
+  const subsResult = await db.execute("SELECT * FROM push_subscriptions");
+  const subs = subsResult.rows as unknown as PushSubscriptionRow[];
+
+  let sentCount = 0;
+  for (const snooze of snoozes) {
+    const taskResult = await db.execute({ sql: "SELECT * FROM tasks WHERE id = ?", args: [snooze.task_id] });
+    const task = taskResult.rows[0] as unknown as Task | undefined;
+
+    if (task && !task.completed) {
+      const pushResults = await sendPushToAll(subs, {
+        title: `Reminder: ${task.title}`,
+        body: `${task.subject} · due ${new Date(task.due_at).toLocaleString("en-US", {
+          weekday: "short",
+          hour: "numeric",
+          minute: "2-digit",
+        })}`,
+        url: "/",
+        taskId: task.id,
+      });
+      for (const r of pushResults) {
+        if (r.gone) {
+          await db.execute({ sql: "DELETE FROM push_subscriptions WHERE endpoint = ?", args: [r.endpoint] });
+        }
+      }
+      sentCount++;
+    }
+
+    await db.execute({ sql: "UPDATE snoozes SET sent = 1 WHERE id = ?", args: [snooze.id] });
+  }
+
+  return sentCount;
+}
+
 async function handle(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -135,8 +180,15 @@ async function handle(req: NextRequest) {
 
   const generated = await topUpRecurringInstances();
   const { checked, sent } = await sendDueReminders();
+  const snoozesSent = await sendDueSnoozes();
 
-  return NextResponse.json({ ok: true, generatedInstances: generated, tasksChecked: checked, remindersSent: sent });
+  return NextResponse.json({
+    ok: true,
+    generatedInstances: generated,
+    tasksChecked: checked,
+    remindersSent: sent,
+    snoozesSent,
+  });
 }
 
 export async function GET(req: NextRequest) {

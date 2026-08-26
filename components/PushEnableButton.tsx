@@ -62,17 +62,17 @@ export default function PushEnableButton() {
   if (status === "unsupported") return null;
   if (status === "unconfigured") return null;
   if (status === "on") {
-    return <span className="text-xs text-slate-500">Push notifications on</span>;
+    return <span className="text-xs text-muted">Push notifications on</span>;
   }
   if (status === "denied") {
-    return <span className="text-xs text-slate-500">Notifications blocked in browser settings</span>;
+    return <span className="text-xs text-muted">Notifications blocked in browser settings</span>;
   }
 
   return (
     <button
       onClick={enable}
       disabled={status === "working"}
-      className="text-xs rounded-md border border-border px-2.5 py-1.5 text-slate-300 hover:border-accent hover:text-accent transition-colors"
+      className="text-xs rounded-md border border-border px-2.5 py-1.5 text-muted hover:border-accent hover:text-accent transition-colors"
     >
       {status === "working" ? "Enabling…" : "Enable push reminders"}
     </button>
