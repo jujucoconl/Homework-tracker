@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Task } from "@/lib/types";
 import { toDatetimeLocalValue, fromDatetimeLocalValue } from "@/lib/dateInput";
 import ConfirmButton from "@/components/ConfirmButton";
+import ClassSelect from "@/components/ClassSelect";
 
 function startOfDay(d: Date): Date {
   const x = new Date(d);
@@ -67,10 +68,10 @@ function EditForm({
         className="rounded-md border border-border bg-bg px-2.5 py-1.5 text-sm focus:border-accent focus:outline-none"
       />
       <div className="grid grid-cols-2 gap-2">
-        <input
+        <ClassSelect
+          subjects={subjects}
           value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-          list="subject-options"
+          onChange={setSubject}
           className="rounded-md border border-border bg-bg px-2.5 py-1.5 text-sm focus:border-accent focus:outline-none"
         />
         <input
@@ -80,11 +81,6 @@ function EditForm({
           className="rounded-md border border-border bg-bg px-2.5 py-1.5 text-sm focus:border-accent focus:outline-none"
         />
       </div>
-      <datalist id="subject-options">
-        {subjects.map((s) => (
-          <option key={s} value={s} />
-        ))}
-      </datalist>
       <div className="flex gap-2 justify-end">
         <button onClick={onCancel} className="text-xs text-muted hover:text-ink px-2 py-1">
           Cancel

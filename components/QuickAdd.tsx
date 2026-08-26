@@ -2,18 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { parseQuickAdd } from "@/lib/quickAdd";
+import ClassSelect from "@/components/ClassSelect";
 
 export default function QuickAdd({ subjects, onAdded }: { subjects: string[]; onAdded: () => void }) {
   const [text, setText] = useState("");
+  const [selectedClass, setSelectedClass] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const parsed = useMemo(() => (text.trim() ? parseQuickAdd(text) : null), [text]);
-
-  function insertSubject(subject: string) {
-    const colonIdx = text.indexOf(":");
-    const rest = colonIdx > 0 && colonIdx <= 24 ? text.slice(colonIdx + 1).trimStart() : text;
-    setText(`${subject}: ${rest}`);
-  }
+  const effectiveSubject = selectedClass || parsed?.subject || "General";
 
   async function submit() {
     if (!parsed || !parsed.dueAt || submitting) return;
@@ -24,7 +21,7 @@ export default function QuickAdd({ subjects, onAdded }: { subjects: string[]; on
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: parsed.title,
-          subject: parsed.subject || "General",
+          subject: effectiveSubject,
           dueAt: parsed.dueAt.toISOString(),
         }),
       });
@@ -37,35 +34,29 @@ export default function QuickAdd({ subjects, onAdded }: { subjects: string[]; on
 
   return (
     <div className="w-full">
-      <input
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") submit();
-        }}
-        placeholder='Type it like a sentence: "Math: worksheet ch 4 due fri 5pm"'
-        className="w-full rounded-lg border border-border bg-panel px-4 py-3 text-base placeholder:text-muted focus:border-accent focus:outline-none"
-      />
-
-      {subjects.length > 0 && (
-        <div className="mt-1.5 flex flex-wrap gap-1.5">
-          {subjects.map((s) => (
-            <button
-              key={s}
-              onClick={() => insertSubject(s)}
-              className="rounded-full border border-border px-2 py-0.5 text-[11px] text-muted hover:border-accent hover:text-accent transition-colors"
-            >
-              {s}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="flex gap-2">
+        <ClassSelect
+          subjects={subjects}
+          value={selectedClass}
+          onChange={setSelectedClass}
+          allowAuto
+          className="w-52 shrink-0 rounded-lg border border-border bg-panel px-3 text-sm focus:border-accent focus:outline-none"
+        />
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submit();
+          }}
+          placeholder='Type it like a sentence: "worksheet ch 4 due fri 5pm"'
+          className="flex-1 rounded-lg border border-border bg-panel px-4 py-3 text-base placeholder:text-muted focus:border-accent focus:outline-none"
+        />
+      </div>
 
       <div className="mt-1.5 flex items-center justify-between text-xs text-muted min-h-[1.25rem]">
         {parsed?.dueAt ? (
           <span>
-            {parsed.subject ? <span className="text-accent">{parsed.subject}</span> : "General"} ·{" "}
-            {parsed.title} · due{" "}
+            <span className="text-accent">{effectiveSubject}</span> · {parsed.title} · due{" "}
             {parsed.dueAt.toLocaleString("en-US", {
               weekday: "short",
               month: "short",
@@ -77,7 +68,7 @@ export default function QuickAdd({ subjects, onAdded }: { subjects: string[]; on
         ) : text.trim() ? (
           <span className="text-danger">Couldn&apos;t find a date — try adding one, e.g. &quot;tomorrow&quot; or &quot;fri 5pm&quot;</span>
         ) : (
-          <span>No subject prefix? It&apos;ll go under &quot;General&quot;. Press Enter to add.</span>
+          <span>Pick a class, type the rest, press Enter to add.</span>
         )}
         <button
           onClick={submit}

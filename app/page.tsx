@@ -130,7 +130,7 @@ export default function Home() {
   const completedTasks = tasks.filter((t) => t.completed);
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-10 flex flex-col gap-8">
+    <main className="mx-auto max-w-[1400px] px-6 lg:px-10 py-10 flex flex-col gap-8">
       <header className="flex items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Homework Tracker</h1>
         <div className="flex items-center gap-3">
@@ -140,83 +140,88 @@ export default function Home() {
         </div>
       </header>
 
-      <QuickAdd subjects={subjects} onAdded={refresh} />
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-10 items-start">
+        <div className="flex flex-col gap-6 min-w-0">
+          <QuickAdd subjects={subjects} onAdded={refresh} />
 
-      <div className="flex items-center justify-between">
-        <div className="flex gap-1 rounded-lg border border-border p-0.5 w-fit">
-          {(["active", "completed"] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setStatusTab(tab)}
-              className={`rounded-md px-3 py-1 text-xs capitalize transition-colors ${
-                statusTab === tab ? "bg-accent text-slate-900 font-medium" : "text-muted hover:text-ink"
-              }`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div className="flex gap-1 rounded-lg border border-border p-0.5 w-fit">
+              {(["active", "completed"] as const).map((tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setStatusTab(tab)}
+                  className={`rounded-md px-3 py-1 text-xs capitalize transition-colors ${
+                    statusTab === tab ? "bg-accent text-slate-900 font-medium" : "text-muted hover:text-ink"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
 
-        {statusTab === "active" && (
-          <div className="flex gap-1 rounded-lg border border-border p-0.5 w-fit">
-            {(["list", "week"] as const).map((v) => (
+            {statusTab === "active" && (
+              <div className="flex gap-1 rounded-lg border border-border p-0.5 w-fit">
+                {(["list", "week"] as const).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setView(v)}
+                    className={`rounded-md px-3 py-1 text-xs capitalize transition-colors ${
+                      view === v ? "bg-accent text-slate-900 font-medium" : "text-muted hover:text-ink"
+                    }`}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {statusTab === "active" && subjects.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 -mt-3">
               <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`rounded-md px-3 py-1 text-xs capitalize transition-colors ${
-                  view === v ? "bg-accent text-slate-900 font-medium" : "text-muted hover:text-ink"
+                onClick={() => setSubjectFilter(null)}
+                className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
+                  !subjectFilter ? "border-accent text-accent" : "border-border text-muted hover:border-accent"
                 }`}
               >
-                {v}
+                All
               </button>
-            ))}
-          </div>
-        )}
-      </div>
+              {subjects.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => setSubjectFilter(s)}
+                  className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
+                    subjectFilter === s ? "border-accent text-accent" : "border-border text-muted hover:border-accent"
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
 
-      {statusTab === "active" && subjects.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 -mt-4">
-          <button
-            onClick={() => setSubjectFilter(null)}
-            className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
-              !subjectFilter ? "border-accent text-accent" : "border-border text-muted hover:border-accent"
-            }`}
-          >
-            All
-          </button>
-          {subjects.map((s) => (
-            <button
-              key={s}
-              onClick={() => setSubjectFilter(s)}
-              className={`rounded-full border px-2.5 py-0.5 text-xs transition-colors ${
-                subjectFilter === s ? "border-accent text-accent" : "border-border text-muted hover:border-accent"
-              }`}
-            >
-              {s}
-            </button>
-          ))}
+          {loading ? (
+            <p className="text-muted text-sm">Loading…</p>
+          ) : statusTab === "completed" ? (
+            <CompletedList tasks={completedTasks} onUncomplete={uncompleteTask} onDelete={deleteTask} />
+          ) : view === "week" ? (
+            <WeekView tasks={activeTasks} onToggle={(id) => completeTask(activeTasks.find((t) => t.id === id)!)} />
+          ) : (
+            <TaskList
+              tasks={activeTasks}
+              subjects={subjects}
+              onToggle={(id) => completeTask(activeTasks.find((t) => t.id === id)!)}
+              onDelete={deleteTask}
+              onEdit={editTask}
+            />
+          )}
         </div>
-      )}
 
-      {loading ? (
-        <p className="text-muted text-sm">Loading…</p>
-      ) : statusTab === "completed" ? (
-        <CompletedList tasks={completedTasks} onUncomplete={uncompleteTask} onDelete={deleteTask} />
-      ) : view === "week" ? (
-        <WeekView tasks={activeTasks} onToggle={(id) => completeTask(activeTasks.find((t) => t.id === id)!)} />
-      ) : (
-        <TaskList
-          tasks={activeTasks}
-          subjects={subjects}
-          onToggle={(id) => completeTask(activeTasks.find((t) => t.id === id)!)}
-          onDelete={deleteTask}
-          onEdit={editTask}
-        />
-      )}
-
-      <div className="border-t border-border pt-6 flex flex-col gap-4">
-        <RecurringManager templates={templates} onTogglePause={togglePauseTemplate} onDelete={deleteTemplate} />
-        <RecurringForm subjects={subjects} onAdded={refresh} />
+        <div className="flex flex-col gap-4 lg:sticky lg:top-10">
+          <h2 className="text-sm font-semibold text-muted uppercase tracking-wide">Repeating homework</h2>
+          <RecurringManager templates={templates} onTogglePause={togglePauseTemplate} onDelete={deleteTemplate} />
+          <RecurringForm subjects={subjects} onAdded={refresh} />
+        </div>
       </div>
 
       {undo && <UndoToast message={`"${undo.title}" marked done`} onUndo={undoComplete} />}

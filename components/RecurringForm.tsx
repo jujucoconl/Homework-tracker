@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { WEEKDAY_LABELS } from "@/lib/recurrence";
+import ClassSelect from "@/components/ClassSelect";
 
 export default function RecurringForm({ subjects, onAdded }: { subjects: string[]; onAdded: () => void }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState("General");
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [dueTime, setDueTime] = useState("23:59");
   const [endDate, setEndDate] = useState("");
@@ -34,7 +35,7 @@ export default function RecurringForm({ subjects, onAdded }: { subjects: string[
         }),
       });
       setTitle("");
-      setSubject("");
+      setSubject("General");
       setWeekdays([]);
       setDueTime("23:59");
       setEndDate("");
@@ -69,18 +70,12 @@ export default function RecurringForm({ subjects, onAdded }: { subjects: string[
           placeholder="Title, e.g. Vocab quiz"
           className="rounded-md border border-border bg-bg px-3 py-2 text-sm placeholder:text-muted focus:border-accent focus:outline-none"
         />
-        <input
+        <ClassSelect
+          subjects={subjects}
           value={subject}
-          onChange={(e) => setSubject(e.target.value)}
-          placeholder="Subject, e.g. Spanish"
-          list="recurring-subject-options"
-          className="rounded-md border border-border bg-bg px-3 py-2 text-sm placeholder:text-muted focus:border-accent focus:outline-none"
+          onChange={setSubject}
+          className="rounded-md border border-border bg-bg px-3 py-2 text-sm focus:border-accent focus:outline-none"
         />
-        <datalist id="recurring-subject-options">
-          {subjects.map((s) => (
-            <option key={s} value={s} />
-          ))}
-        </datalist>
       </div>
 
       <div className="flex flex-wrap gap-1.5">
