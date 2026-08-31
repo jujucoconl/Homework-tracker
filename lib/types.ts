@@ -10,6 +10,9 @@ export interface Task {
   completed_at: string | null;
   recurring_template_id: string | null;
   created_at: string;
+  google_event_id: string | null;
+  calendar_synced: number;
+  estimated_minutes: number | null;
 }
 
 export interface RecurringTemplate {
@@ -24,6 +27,7 @@ export interface RecurringTemplate {
   notes: string | null;
   active: number;
   created_at: string;
+  estimated_minutes: number | null;
 }
 
 export interface PushSubscriptionRow {
@@ -40,4 +44,12 @@ export interface SnoozeRow {
   fire_at: string;
   sent: number;
   created_at: string;
+}
+
+export interface CalendarSettingsRow {
+  id: string;
+  access_token: string | null;
+  refresh_token: string | null;
+  expiry: string | null;
+  connected_at: string | null;
 }

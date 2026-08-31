@@ -9,6 +9,7 @@ import RecurringForm from "@/components/RecurringForm";
 import RecurringManager from "@/components/RecurringManager";
 import PushEnableButton from "@/components/PushEnableButton";
 import TestReminderButton from "@/components/TestReminderButton";
+import CalendarConnectButton from "@/components/CalendarConnectButton";
 import ThemeToggle from "@/components/ThemeToggle";
 import UndoToast from "@/components/UndoToast";
 import type { RecurringTemplate, Task } from "@/lib/types";
@@ -100,8 +101,15 @@ export default function Home() {
     await fetch(`/api/tasks/${id}`, { method: "DELETE" });
   }
 
-  async function editTask(id: string, updates: { title: string; subject: string; dueAt: string }) {
-    setTasks((cur) => cur.map((t) => (t.id === id ? { ...t, ...updates, due_at: updates.dueAt } : t)));
+  async function editTask(
+    id: string,
+    updates: { title: string; subject: string; dueAt: string; estimatedMinutes: number | null }
+  ) {
+    setTasks((cur) =>
+      cur.map((t) =>
+        t.id === id ? { ...t, ...updates, due_at: updates.dueAt, estimated_minutes: updates.estimatedMinutes } : t
+      )
+    );
     await fetch(`/api/tasks/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -135,6 +143,7 @@ export default function Home() {
         <h1 className="text-xl font-semibold">Homework Tracker</h1>
         <div className="flex items-center gap-3">
           <PushEnableButton />
+          <CalendarConnectButton />
           <TestReminderButton />
           <ThemeToggle />
         </div>

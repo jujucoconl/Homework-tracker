@@ -74,7 +74,35 @@ CREATE TABLE IF NOT EXISTS snoozes (
   created_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_snoozes_fire_at ON snoozes(fire_at);
+
+CREATE TABLE IF NOT EXISTS calendar_settings (
+  id TEXT PRIMARY KEY,
+  access_token TEXT,
+  refresh_token TEXT,
+  expiry TEXT,
+  connected_at TEXT
+);
 `;
+
+// Columns added after the initial release need an explicit migration —
+// "CREATE TABLE IF NOT EXISTS" above does nothing for a table that already
+// exists without the new column.
+const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
+  { table: "tasks", column: "google_event_id", ddl: "TEXT" },
+  { table: "tasks", column: "calendar_synced", ddl: "INTEGER NOT NULL DEFAULT 0" },
+  { table: "tasks", column: "estimated_minutes", ddl: "INTEGER" },
+  { table: "recurring_templates", column: "estimated_minutes", ddl: "INTEGER" },
+];
+
+async function runColumnMigrations(db: Client): Promise<void> {
+  for (const { table, column, ddl } of COLUMN_MIGRATIONS) {
+    const info = await db.execute(`PRAGMA table_info(${table})`);
+    const exists = (info.rows as unknown as { name: string }[]).some((r) => r.name === column);
+    if (!exists) {
+      await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+    }
+  }
+}
 
 async function init(): Promise<void> {
   const db = getClient();
@@ -85,6 +113,7 @@ async function init(): Promise<void> {
   for (const stmt of statements) {
     await db.execute(stmt);
   }
+  await runColumnMigrations(db);
 }
 
 export async function getDb(): Promise<Client> {

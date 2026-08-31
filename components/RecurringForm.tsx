@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { WEEKDAY_LABELS } from "@/lib/recurrence";
 import ClassSelect from "@/components/ClassSelect";
+import EstimateInput from "@/components/EstimateInput";
 
 export default function RecurringForm({ subjects, onAdded }: { subjects: string[]; onAdded: () => void }) {
   const [open, setOpen] = useState(false);
@@ -11,6 +12,7 @@ export default function RecurringForm({ subjects, onAdded }: { subjects: string[
   const [weekdays, setWeekdays] = useState<number[]>([]);
   const [dueTime, setDueTime] = useState("23:59");
   const [endDate, setEndDate] = useState("");
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   function toggleDay(v: number) {
@@ -32,6 +34,7 @@ export default function RecurringForm({ subjects, onAdded }: { subjects: string[
           dueTime,
           timezone,
           endDate: endDate || null,
+          estimatedMinutes,
         }),
       });
       setTitle("");
@@ -39,6 +42,7 @@ export default function RecurringForm({ subjects, onAdded }: { subjects: string[
       setWeekdays([]);
       setDueTime("23:59");
       setEndDate("");
+      setEstimatedMinutes(null);
       setOpen(false);
       onAdded();
     } finally {
@@ -110,6 +114,14 @@ export default function RecurringForm({ subjects, onAdded }: { subjects: string[
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
+            className="rounded-md border border-border bg-bg px-3 py-2 text-sm focus:border-accent focus:outline-none"
+          />
+        </label>
+        <label className="text-xs text-muted flex flex-col gap-1">
+          Est. time (optional)
+          <EstimateInput
+            value={estimatedMinutes}
+            onChange={setEstimatedMinutes}
             className="rounded-md border border-border bg-bg px-3 py-2 text-sm focus:border-accent focus:outline-none"
           />
         </label>

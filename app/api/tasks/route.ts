@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { pushTaskToCalendar } from "@/lib/googleCalendar";
 import type { Task } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
@@ -14,11 +15,12 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { title, subject, dueAt, notes } = body as {
+  const { title, subject, dueAt, notes, estimatedMinutes } = body as {
     title?: string;
     subject?: string;
     dueAt?: string;
     notes?: string;
+    estimatedMinutes?: number | null;
   };
 
   if (!title || !title.trim()) {
@@ -31,12 +33,30 @@ export async function POST(req: NextRequest) {
   const db = await getDb();
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
+  const isoDueAt = new Date(dueAt).toISOString();
+  const cleanTitle = title.trim();
+  const cleanSubject = (subject || "General").trim();
+  const minutes = estimatedMinutes && estimatedMinutes > 0 ? Math.round(estimatedMinutes) : null;
 
   await db.execute({
-    sql: `INSERT INTO tasks (id, title, subject, due_at, notes, completed, recurring_template_id, created_at)
-          VALUES (?, ?, ?, ?, ?, 0, NULL, ?)`,
-    args: [id, title.trim(), (subject || "General").trim(), new Date(dueAt).toISOString(), notes || null, now],
+    sql: `INSERT INTO tasks (id, title, subject, due_at, notes, completed, recurring_template_id, created_at, estimated_minutes)
+          VALUES (?, ?, ?, ?, ?, 0, NULL, ?, ?)`,
+    args: [id, cleanTitle, cleanSubject, isoDueAt, notes || null, now, minutes],
   });
+
+  const googleEventId = await pushTaskToCalendar({
+    id,
+    title: cleanTitle,
+    subject: cleanSubject,
+    due_at: isoDueAt,
+    estimated_minutes: minutes,
+  });
+  if (googleEventId) {
+    await db.execute({
+      sql: "UPDATE tasks SET google_event_id = ?, calendar_synced = 1 WHERE id = ?",
+      args: [googleEventId, id],
+    });
+  }
 
   const result = await db.execute({ sql: "SELECT * FROM tasks WHERE id = ?", args: [id] });
   return NextResponse.json({ task: result.rows[0] as unknown as Task }, { status: 201 });

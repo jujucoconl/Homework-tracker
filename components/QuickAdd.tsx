@@ -3,10 +3,12 @@
 import { useMemo, useState } from "react";
 import { parseQuickAdd } from "@/lib/quickAdd";
 import ClassSelect from "@/components/ClassSelect";
+import EstimateInput from "@/components/EstimateInput";
 
 export default function QuickAdd({ subjects, onAdded }: { subjects: string[]; onAdded: () => void }) {
   const [text, setText] = useState("");
   const [selectedClass, setSelectedClass] = useState("");
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const parsed = useMemo(() => (text.trim() ? parseQuickAdd(text) : null), [text]);
@@ -23,9 +25,11 @@ export default function QuickAdd({ subjects, onAdded }: { subjects: string[]; on
           title: parsed.title,
           subject: effectiveSubject,
           dueAt: parsed.dueAt.toISOString(),
+          estimatedMinutes,
         }),
       });
       setText("");
+      setEstimatedMinutes(null);
       onAdded();
     } finally {
       setSubmitting(false);
@@ -51,6 +55,11 @@ export default function QuickAdd({ subjects, onAdded }: { subjects: string[]; on
           placeholder='Type it like a sentence: "worksheet ch 4 due fri 5pm"'
           className="flex-1 rounded-lg border border-border bg-panel px-4 py-3 text-base placeholder:text-muted focus:border-accent focus:outline-none"
         />
+        <EstimateInput
+          value={estimatedMinutes}
+          onChange={setEstimatedMinutes}
+          className="w-20 shrink-0 rounded-lg border border-border bg-panel px-2 text-sm text-center placeholder:text-muted focus:border-accent focus:outline-none"
+        />
       </div>
 
       <div className="mt-1.5 flex items-center justify-between text-xs text-muted min-h-[1.25rem]">
@@ -64,11 +73,12 @@ export default function QuickAdd({ subjects, onAdded }: { subjects: string[]; on
               hour: "numeric",
               minute: "2-digit",
             })}
+            {estimatedMinutes ? ` · ~${estimatedMinutes} min` : ""}
           </span>
         ) : text.trim() ? (
           <span className="text-danger">Couldn&apos;t find a date — try adding one, e.g. &quot;tomorrow&quot; or &quot;fri 5pm&quot;</span>
         ) : (
-          <span>Pick a class, type the rest, press Enter to add.</span>
+          <span>Pick a class, type the rest, press Enter to add. Minutes box is optional.</span>
         )}
         <button
           onClick={submit}

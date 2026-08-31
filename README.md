@@ -41,6 +41,19 @@ repeating assignments once, and get reminded **24 hours**, **8 hours**, and
   can confirm setup without waiting for a real due date.
 - **Light/dark theme toggle** — follows your system preference by
   default; the toggle in the header overrides and remembers your choice.
+- **Class picker** — a dropdown of your existing classes (plus "+ Add new
+  class") in quick add, the edit form, and the repeating-homework form.
+  Quick add still auto-detects a class from typed text (e.g. `Math: ...`)
+  when you leave the dropdown on "auto."
+- **Time estimate (optional)** — a "min" box next to quick add, the edit
+  form, and the repeating-homework form, purely for your own planning. If
+  set, it's also used as the event duration when synced to Google Calendar
+  (defaults to 30 minutes when left blank).
+- **Google Calendar sync (optional)** — connect your Google account once
+  and every task becomes a real event on your primary calendar: created
+  when you add homework, updated when you edit it, removed when you
+  delete it. Marking something complete does *not* touch its calendar
+  event — the calendar keeps showing what was due at that time regardless.
 
 ## Stack
 
@@ -123,6 +136,55 @@ and add two repository secrets:
 That's it — the workflow is already enabled and will start firing every 15
 minutes once those secrets exist. You can trigger it manually from the
 Actions tab (`Run workflow`) to test it immediately after deploying.
+
+## 6. Connect Google Calendar (optional)
+
+This is the most involved setup step — Google gates Calendar API access
+behind an OAuth app, so you need your own (free) Google Cloud project. It's
+a one-time, ~10 minute setup.
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/) and
+   create a new project (any name — e.g. "Homework Tracker").
+2. **Enable the API**: APIs & Services → Library → search "Google Calendar
+   API" → Enable.
+3. **Configure the consent screen**: APIs & Services → OAuth consent screen.
+   - User type: External.
+   - Fill in the required fields (app name, your email as support/contact).
+   - Scopes: you can skip adding scopes here — the app requests
+     `calendar.events` directly.
+   - Test users: add your own Google account email. (Since the app stays in
+     "Testing" mode, only accounts you list here can authorize it — perfect
+     for a personal tool, and avoids Google's app-review process entirely.)
+4. **Create credentials**: APIs & Services → Credentials → Create
+   Credentials → OAuth client ID.
+   - Application type: Web application.
+   - Authorized redirect URIs, add both:
+     - `http://localhost:3000/api/calendar/callback` (for local dev)
+     - `https://<your-vercel-url>/api/calendar/callback` (for production)
+   - Save, then copy the **Client ID** and **Client Secret**.
+5. Add to your env (locally in `.env.local`, and in Vercel's Environment
+   Variables for production):
+   ```
+   GOOGLE_CLIENT_ID=...
+   GOOGLE_CLIENT_SECRET=...
+   APP_URL=https://<your-vercel-url>
+   ```
+   (`APP_URL` is the same value you may have already set as a GitHub Actions
+   secret for the reminder cron — here it needs to also exist as an actual
+   **Vercel** environment variable, since the app itself uses it to build the
+   correct OAuth redirect URL.)
+6. Redeploy, then open the app and click **"Connect Google Calendar"** in
+   the header. You'll go through Google's consent screen once; after that,
+   homework you add, edit, or delete stays in sync automatically.
+
+Notes on how the sync behaves:
+- New tasks sync immediately. A newly created repeating series (which can
+  generate dozens of occurrences at once) syncs its first 10 immediately and
+  the rest within the next couple of 15-minute cron runs, so creating a
+  semester's worth of recurring homework never risks a slow request.
+- Disconnecting stops future syncing but does **not** delete events already
+  created on your calendar — remove those from Google Calendar directly if
+  you want them gone.
 
 ## Data model notes
 

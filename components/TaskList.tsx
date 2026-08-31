@@ -5,6 +5,7 @@ import type { Task } from "@/lib/types";
 import { toDatetimeLocalValue, fromDatetimeLocalValue } from "@/lib/dateInput";
 import ConfirmButton from "@/components/ConfirmButton";
 import ClassSelect from "@/components/ClassSelect";
+import EstimateInput from "@/components/EstimateInput";
 
 function startOfDay(d: Date): Date {
   const x = new Date(d);
@@ -53,12 +54,13 @@ function EditForm({
 }: {
   task: Task;
   subjects: string[];
-  onSave: (updates: { title: string; subject: string; dueAt: string }) => void;
+  onSave: (updates: { title: string; subject: string; dueAt: string; estimatedMinutes: number | null }) => void;
   onCancel: () => void;
 }) {
   const [title, setTitle] = useState(task.title);
   const [subject, setSubject] = useState(task.subject);
   const [dueLocal, setDueLocal] = useState(toDatetimeLocalValue(task.due_at));
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number | null>(task.estimated_minutes);
 
   return (
     <li className="rounded-lg border border-accent bg-panel px-3 py-3 flex flex-col gap-2">
@@ -67,7 +69,7 @@ function EditForm({
         onChange={(e) => setTitle(e.target.value)}
         className="rounded-md border border-border bg-bg px-2.5 py-1.5 text-sm focus:border-accent focus:outline-none"
       />
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <ClassSelect
           subjects={subjects}
           value={subject}
@@ -80,6 +82,11 @@ function EditForm({
           onChange={(e) => setDueLocal(e.target.value)}
           className="rounded-md border border-border bg-bg px-2.5 py-1.5 text-sm focus:border-accent focus:outline-none"
         />
+        <EstimateInput
+          value={estimatedMinutes}
+          onChange={setEstimatedMinutes}
+          className="rounded-md border border-border bg-bg px-2.5 py-1.5 text-sm text-center focus:border-accent focus:outline-none"
+        />
       </div>
       <div className="flex gap-2 justify-end">
         <button onClick={onCancel} className="text-xs text-muted hover:text-ink px-2 py-1">
@@ -87,7 +94,12 @@ function EditForm({
         </button>
         <button
           onClick={() =>
-            onSave({ title: title.trim() || task.title, subject: subject.trim() || "General", dueAt: fromDatetimeLocalValue(dueLocal) })
+            onSave({
+              title: title.trim() || task.title,
+              subject: subject.trim() || "General",
+              dueAt: fromDatetimeLocalValue(dueLocal),
+              estimatedMinutes,
+            })
           }
           className="text-xs rounded-md bg-accent px-3 py-1 text-slate-900 font-medium"
         >
@@ -109,7 +121,7 @@ export default function TaskList({
   subjects: string[];
   onToggle: (id: string, completed: boolean) => void;
   onDelete: (id: string) => void;
-  onEdit: (id: string, updates: { title: string; subject: string; dueAt: string }) => void;
+  onEdit: (id: string, updates: { title: string; subject: string; dueAt: string; estimatedMinutes: number | null }) => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -168,6 +180,8 @@ export default function TaskList({
                         })}
                       </span>
                       {t.recurring_template_id && <span title="Repeating">↻</span>}
+                      {t.estimated_minutes && <span>· ~{t.estimated_minutes} min</span>}
+                      {t.google_event_id && <span title="Synced to Google Calendar">📅</span>}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0">

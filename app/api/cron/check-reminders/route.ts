@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { sendPushToAll, sendReminderEmail } from "@/lib/notifications";
 import { generateOccurrences, GENERATION_WINDOW_DAYS, TOPUP_THRESHOLD_DAYS } from "@/lib/recurrence";
+import { isCalendarConnected, pushTaskToCalendar } from "@/lib/googleCalendar";
 import type { PushSubscriptionRow, RecurringTemplate, ReminderType, SnoozeRow, Task } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -59,9 +60,9 @@ async function topUpRecurringInstances() {
     for (const dueAt of occurrences) {
       const taskId = crypto.randomUUID();
       await db.execute({
-        sql: `INSERT INTO tasks (id, title, subject, due_at, notes, completed, recurring_template_id, created_at)
-              VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
-        args: [taskId, row.title, row.subject, dueAt, row.notes, row.id, now],
+        sql: `INSERT INTO tasks (id, title, subject, due_at, notes, completed, recurring_template_id, created_at, estimated_minutes)
+              VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+        args: [taskId, row.title, row.subject, dueAt, row.notes, row.id, now, row.estimated_minutes],
       });
       totalGenerated++;
     }
@@ -173,6 +174,44 @@ async function sendDueSnoozes() {
   return sentCount;
 }
 
+// Bounded per run so a large backlog (e.g. a freshly-created recurring series)
+// can't push this request past a serverless timeout — the rest catches up on
+// the next 15-minute run.
+const CALENDAR_BACKLOG_BATCH_SIZE = 20;
+
+async function syncCalendarBacklog() {
+  if (!(await isCalendarConnected())) return 0;
+
+  const db = await getDb();
+  const unsynced = await db.execute({
+    sql: "SELECT * FROM tasks WHERE calendar_synced = 0 AND completed = 0 ORDER BY due_at ASC LIMIT ?",
+    args: [CALENDAR_BACKLOG_BATCH_SIZE],
+  });
+
+  let syncedCount = 0;
+  for (const row of unsynced.rows as unknown as Task[]) {
+    const googleEventId = await pushTaskToCalendar({
+      id: row.id,
+      title: row.title,
+      subject: row.subject,
+      due_at: row.due_at,
+      estimated_minutes: row.estimated_minutes,
+    });
+    if (googleEventId) {
+      await db.execute({
+        sql: "UPDATE tasks SET google_event_id = ?, calendar_synced = 1 WHERE id = ?",
+        args: [googleEventId, row.id],
+      });
+      syncedCount++;
+    } else {
+      // Couldn't sync (token issue, API error) — stop for this run rather than
+      // retrying the same failure across the whole backlog.
+      break;
+    }
+  }
+  return syncedCount;
+}
+
 async function handle(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
@@ -181,6 +220,7 @@ async function handle(req: NextRequest) {
   const generated = await topUpRecurringInstances();
   const { checked, sent } = await sendDueReminders();
   const snoozesSent = await sendDueSnoozes();
+  const calendarSynced = await syncCalendarBacklog();
 
   return NextResponse.json({
     ok: true,
@@ -188,6 +228,7 @@ async function handle(req: NextRequest) {
     tasksChecked: checked,
     remindersSent: sent,
     snoozesSent,
+    calendarSynced,
   });
 }
 
