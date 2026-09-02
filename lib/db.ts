@@ -95,24 +95,38 @@ const COLUMN_MIGRATIONS: { table: string; column: string; ddl: string }[] = [
 ];
 
 async function runColumnMigrations(db: Client): Promise<void> {
-  for (const { table, column, ddl } of COLUMN_MIGRATIONS) {
-    const info = await db.execute(`PRAGMA table_info(${table})`);
-    const exists = (info.rows as unknown as { name: string }[]).some((r) => r.name === column);
-    if (!exists) {
-      await db.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
-    }
+  // One table_info lookup per unique table (not per column) — each is a
+  // network round trip against a remote database, so this matters.
+  const tables = Array.from(new Set(COLUMN_MIGRATIONS.map((m) => m.table)));
+  const infoResults = await db.batch(
+    tables.map((t) => `PRAGMA table_info(${t})`),
+    "read"
+  );
+  const existingByTable = new Map<string, Set<string>>();
+  tables.forEach((t, i) => {
+    const rows = infoResults[i].rows as unknown as { name: string }[];
+    existingByTable.set(t, new Set(rows.map((r) => r.name)));
+  });
+
+  const alterStatements = COLUMN_MIGRATIONS.filter(
+    ({ table, column }) => !existingByTable.get(table)?.has(column)
+  ).map(({ table, column, ddl }) => `ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+
+  if (alterStatements.length > 0) {
+    await db.batch(alterStatements, "write");
   }
 }
 
 async function init(): Promise<void> {
   const db = getClient();
-  await db.execute("PRAGMA foreign_keys = ON");
+  // All of this only runs once per cold start (cached via initPromise below),
+  // but against a remote Turso database each statement is a network round
+  // trip, so batching them into one call matters for how long that first
+  // request takes.
   const statements = SCHEMA.split(";")
     .map((s) => s.trim())
     .filter(Boolean);
-  for (const stmt of statements) {
-    await db.execute(stmt);
-  }
+  await db.batch(["PRAGMA foreign_keys = ON", ...statements], "write");
   await runColumnMigrations(db);
 }
 
